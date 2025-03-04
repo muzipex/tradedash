@@ -42,23 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const serverType = form.querySelector('input[name="serverType"]:checked').value;
         const serverValue = serverInput.value.toLowerCase();
 
-        // Validate server format based on type
-        const isValidServer = serverType === 'demo' ? 
-            /^(metaquotes-demo|mt5demo)/i.test(serverValue) :
-            /^(metaquotes-live|mt5live)/i.test(serverValue);
-
-        if (!isValidServer) {
-            serverInput.setCustomValidity(`Please enter a valid ${serverType} server address`);
-        } else {
-            serverInput.setCustomValidity('');
-        }
-
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return false;
-        }
-        return true;
-    };
+       
 
     // Handle login form submission
     loginForm.addEventListener('submit', async (e) => {
@@ -90,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadDashboardData();
                 wsManager.showNotification('Successfully connected to MT5');
             } else {
+                loadDashboardData();
                 wsManager.showNotification(data.message || 'Failed to connect to MT5');
             }
         } catch (error) {
