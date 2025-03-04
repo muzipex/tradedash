@@ -390,20 +390,39 @@ def update_config():
     bot.config.update(data)
     return jsonify(bot.config)
 
+# Handle WebSocket connection
 @socketio.on('connect')
 def handle_connect():
-    logger.info("Client connected via WebSocket")
-    bot = get_current_bot()
-    emit('status', {
-        'type': 'status_update',
-        'connected': bot.connected if bot else False,
-        'message': 'Connected to trading bot'
-    })
+    logger.info('Client connected via WebSocket')
 
+    # Send an MT5 initialization request to the frontend
+    emit('mt5_init_request', {'message': 'Requesting MT5 initialization'})
+
+# Handle MT5 initialization response from the frontend
+@socketio.on('mt5_init_response')
+def handle_mt5_init_response(data):
+    logger.info(f"Received MT5 initialization response: {data}")
+    # Here you can handle the initialization with the received data (e.g., login to MT5)
+    
+    # Assuming you're checking the credentials or performing actions
+    if data.get('server') and data.get('accountId') and data.get('password'):
+        logger.info("MT5 initialization successful")
+        emit('status_update', {
+            'connected': True,
+            'message': 'MT5 initialized successfully'
+        })
+    else:
+        logger.error("MT5 initialization failed. Missing credentials.")
+        emit('status_update', {
+            'connected': False,
+            'message': 'MT5 initialization failed. Invalid credentials.'
+        })
+
+# Handle WebSocket disconnection
 @socketio.on('disconnect')
 def handle_disconnect():
-    logger.info("Client disconnected from WebSocket")
-
+    logger.info('Client disconnected from WebSocket')
+    # Additional logic can go here to handle any necessary clean-up actions
 # Create database tables
 with app.app_context():
     db.create_all()
