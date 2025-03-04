@@ -404,51 +404,66 @@ def handle_connect():
 def handle_mt5_init_response(data):
     logger.info(f"Received MT5 initialization response: {data}")
 
-    # Extract credentials from the data
     account_id = data.get('accountId')
     server = data.get('server')
     password = data.get('password')
 
-    # Start MT5 bot automation
-  
+    if not account_id or not server or not password:
+        logger.error("Missing account credentials")
+        return jsonify({"message": "Missing account credentials"}), 400
+
+    success = start_mt5_bot(account_id, server, password)
+    if success:
+        logger.info("MT5 automation started successfully!")
+    else:
+        logger.error("MT5 automation failed to start.")
+
 
 def start_mt5_bot(account_id, server, password):
     """
     Uses Appium to log into MT5 and starts the trading bot after successful login.
     """
-    global bot_instance
-
     logger.info("Starting MT5 Bot Automation...")
 
+    # Ensure Appium is running
+    def start_appium():
+        subprocess.Popen(["appium"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        time.sleep(5)  # Wait for Appium to start
+
+    start_appium()
+    appium_server_url = 'http://localhost:4723/wd/hub'
+    
     capabilities = {
         'platformName': 'Android',
-        'deviceName': 'emulator-5554',  # Update with actual device name
-        'appPackage': 'com.metaquotes.metatrader5',
+        'deviceName': 'Rich Gang',  # Change this to your actual device/emulator
+        'appPackage': 'net.metaquotes.metatrader5',  # Updated app package
         'appActivity': '.MainActivity',
+        'automationName': 'UiAutomator2',
         'noReset': True
     }
 
-    driver = webdriver.Remote('http://localhost:4723/wd/hub', capabilities)
-
     try:
-        # Automate login in MT5
-        driver.find_element_by_id('com.metaquotes.metatrader5:id/accountId').send_keys(account_id)
-        driver.find_element_by_id('com.metaquotes.metatrader5:id/server').send_keys(server)
-        driver.find_element_by_id('com.metaquotes.metatrader5:id/password').send_keys(password)
-        driver.find_element_by_id('com.metaquotes.metatrader5:id/login_button').click()
+        driver = webdriver.Remote(appium_server_url, capabilities)
+        time.sleep(5)  # Wait for the app to load
 
-        # Wait for login to complete
-        time.sleep(5)
+        # Locate and fill in login fields
+        driver.find_element("xpath", '//android.widget.EditText[@resource-id="com.metaquotes.metatrader5:id/accountId"]').send_keys(account_id)
+        driver.find_element("xpath", '//android.widget.EditText[@resource-id="com.metaquotes.metatrader5:id/server"]').send_keys(server)
+        driver.find_element("xpath", '//android.widget.EditText[@resource-id="com.metaquotes.metatrader5:id/password"]').send_keys(password)
 
-        # Check if login was successful (you might need to check for UI elements)
-        if "Trade" in driver.page_source:  # Simple check to verify login success
+        # Click login button
+        driver.find_element("xpath", '//android.widget.Button[@resource-id="com.metaquotes.metatrader5:id/login_button"]').click()
+
+        # Wait for login to process
+        time.sleep(10)
+
+        # Verify login success
+        if "Trade" in driver.page_source:
             logger.info("Logged in to MT5 successfully!")
 
             bot_instance = TradingBot()
-            bot_instance.start_trading()
+            bot_instance.start_trading()  # Start trading bot
             
-            # This should trigger the bot’s trading function
-
             return True
         else:
             logger.error("Login failed. Please check credentials.")
@@ -457,6 +472,7 @@ def start_mt5_bot(account_id, server, password):
     except Exception as e:
         logger.error(f"Error during MT5 login: {e}")
         return False
+
 # Create database tables
 with app.app_context():
     db.create_all()
