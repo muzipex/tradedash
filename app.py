@@ -107,6 +107,7 @@ class MT5SMCBot:
             return False
 
         try:
+        
             # Here you would implement the actual MT5 mobile connection logic
             # For example, make an HTTP request to MT5 mobile's local API endpoint
             self.connected = True
@@ -443,9 +444,10 @@ def start_mt5_bot(account_id, server, password):
         if "Trade" in driver.page_source:  # Simple check to verify login success
             logger.info("Logged in to MT5 successfully!")
 
-            # Start the trading bot
-            bot_instance = MT5SMCBot()
-            bot_instance.start_trading()  # This should trigger the bot’s trading function
+               bot = MT5SMCBot(data['accountId'], data['password'], server)
+               success = bot.connect()
+            
+            # This should trigger the bot’s trading function
 
             return True
         else:
