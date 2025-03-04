@@ -4,13 +4,11 @@ class WebSocketManager {
         this.connected = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        this.backendUrl = 'https://tradedash.onrender.com';  // Update this with your Render backend URL
     }
 
     connect() {
-        // Use the backend URL to establish the WebSocket connection
-        this.socket = io(this.backendUrl, {
-            path: '/ws',  // Ensure this matches the path used on your backend
+        this.socket = io('https://tradedash.onrender.com', { // Ensure the correct backend URL
+            path: '/ws',
             transports: ['websocket']
         });
 
@@ -32,6 +30,12 @@ class WebSocketManager {
             console.log('WebSocket disconnected');
         });
 
+        // Handle MT5 Initialization Request
+        this.socket.on('mt5_init_request', (data) => {
+            console.log(data.message); // Log the message or show it as a notification
+            this.initiateMT5Login();  // Initiates the MT5 login process
+        });
+
         this.socket.on('status_update', (data) => {
             this.updateConnectionStatus(data.connected);
             this.showNotification(data.message);
@@ -43,6 +47,22 @@ class WebSocketManager {
                 this.showNotification(`New trade: ${data.trade.type} ${data.trade.symbol}`);
             }
         });
+    }
+
+    initiateMT5Login() {
+        // Collect the MT5 credentials from the form
+        const server = document.getElementById('server').value;
+        const accountId = document.getElementById('accountId').value;
+        const password = document.getElementById('password').value;
+
+        // Send the MT5 login details to the backend
+        this.socket.emit('mt5_init_response', {
+            server: server,
+            accountId: accountId,
+            password: password
+        });
+
+        console.log('MT5 Initialization started with server:', server);
     }
 
     updateConnectionStatus(connected) {
@@ -75,5 +95,4 @@ class WebSocketManager {
     }
 }
 
-// Initialize WebSocketManager
 const wsManager = new WebSocketManager();
