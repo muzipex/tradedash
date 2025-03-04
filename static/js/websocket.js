@@ -1,16 +1,13 @@
 class WebSocketManager {
     constructor() {
-        this.socket = null;
-        this.connected = false;
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-    }
-
-    connect() {
-        this.socket = io('https://tradedash.onrender.com', { // Ensure the correct backend URL
+        this.socket = io('https://tradedash.onrender.com', {
             path: '/ws',
             transports: ['websocket']
         });
+
+        this.connected = false;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
 
         this.setupEventListeners();
     }
@@ -21,6 +18,9 @@ class WebSocketManager {
             this.reconnectAttempts = 0;
             this.updateConnectionStatus(true);
             console.log('WebSocket connected');
+
+            // Request MT5 login immediately after connecting
+            this.sendMT5Credentials();
         });
 
         this.socket.on('disconnect', () => {
@@ -30,39 +30,43 @@ class WebSocketManager {
             console.log('WebSocket disconnected');
         });
 
-        // Handle MT5 Initialization Request
-        this.socket.on('mt5_init_request', (data) => {
-            console.log(data.message); // Log the message or show it as a notification
-            this.initiateMT5Login();  // Initiates the MT5 login process
+        // Backend asks for MT5 credentials
+        this.socket.on('mt5_init_request', () => {
+            console.log('Received MT5 init request from backend');
+            this.sendMT5Credentials();
         });
 
-        this.socket.on('status_update', (data) => {
-            this.updateConnectionStatus(data.connected);
+        // Status updates from the backend
+        this.socket.on('status', (data) => {
+            console.log(`Status update: ${data.message}`);
             this.showNotification(data.message);
         });
 
+        // Trade updates from the backend
         this.socket.on('trade_update', (data) => {
             if (data.type === 'trade_update') {
-                updateTradeHistory(data.trade);
+                this.updateTradeHistory(data.trade);
                 this.showNotification(`New trade: ${data.trade.type} ${data.trade.symbol}`);
             }
         });
     }
 
-    initiateMT5Login() {
-        // Collect the MT5 credentials from the form
-        const server = document.getElementById('server').value;
+    sendMT5Credentials() {
         const accountId = document.getElementById('accountId').value;
         const password = document.getElementById('password').value;
+        const server = document.getElementById('server').value;
 
-        // Send the MT5 login details to the backend
+        if (!accountId || !password || !server) {
+            console.error('Missing MT5 login credentials');
+            return;
+        }
+
+        console.log('Sending MT5 credentials to backend...');
         this.socket.emit('mt5_init_response', {
-            server: server,
-            accountId: accountId,
-            password: password
+            account_id: accountId,
+            password: password,
+            server: server
         });
-
-        console.log('MT5 Initialization started with server:', server);
     }
 
     updateConnectionStatus(connected) {
@@ -83,7 +87,7 @@ class WebSocketManager {
             setTimeout(() => {
                 this.reconnectAttempts++;
                 console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                this.connect();
+                this.socket.connect();
             }, 5000);
         }
     }
