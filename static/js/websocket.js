@@ -4,11 +4,13 @@ class WebSocketManager {
         this.connected = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
+        this.backendUrl = 'https://tradedash.onrender.com';  // Update this with your Render backend URL
     }
 
     connect() {
-        this.socket = io('http://localhost:8080', {
-            path: '/ws',
+        // Use the backend URL to establish the WebSocket connection
+        this.socket = io(this.backendUrl, {
+            path: '/ws',  // Ensure this matches the path used on your backend
             transports: ['websocket']
         });
 
@@ -73,4 +75,5 @@ class WebSocketManager {
     }
 }
 
+// Initialize WebSocketManager
 const wsManager = new WebSocketManager();
