@@ -444,8 +444,8 @@ def start_mt5_bot(account_id, server, password):
         if "Trade" in driver.page_source:  # Simple check to verify login success
             logger.info("Logged in to MT5 successfully!")
 
-               bot = MT5SMCBot(data['accountId'], data['password'], server)
-               success = bot.connect()
+               bot_instance = TradingBot()
+            bot_instance.start_trading()
             
             # This should trigger the bot’s trading function
 
