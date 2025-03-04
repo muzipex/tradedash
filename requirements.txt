@@ -9,6 +9,7 @@ requests==2.31.0
 gunicorn
 psycopg2-binary
 gevent
+appium
 
 
 
