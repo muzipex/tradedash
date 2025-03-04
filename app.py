@@ -12,6 +12,7 @@ import logging
 import os
 import threading
 import numpy as np
+from appium import webdriver
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -394,7 +395,6 @@ def update_config():
 @socketio.on('connect')
 def handle_connect():
     logger.info('Client connected via WebSocket')
-
     # Send an MT5 initialization request to the frontend
     emit('mt5_init_request', {'message': 'Requesting MT5 initialization'})
 
@@ -402,27 +402,59 @@ def handle_connect():
 @socketio.on('mt5_init_response')
 def handle_mt5_init_response(data):
     logger.info(f"Received MT5 initialization response: {data}")
-    # Here you can handle the initialization with the received data (e.g., login to MT5)
-    
-    # Assuming you're checking the credentials or performing actions
-    if data.get('server') and data.get('accountId') and data.get('password'):
-        logger.info("MT5 initialization successful")
-        emit('status_update', {
-            'connected': True,
-            'message': 'MT5 initialized successfully'
-        })
-    else:
-        logger.error("MT5 initialization failed. Missing credentials.")
-        emit('status_update', {
-            'connected': False,
-            'message': 'MT5 initialization failed. Invalid credentials.'
-        })
 
-# Handle WebSocket disconnection
-@socketio.on('disconnect')
-def handle_disconnect():
-    logger.info('Client disconnected from WebSocket')
-    # Additional logic can go here to handle any necessary clean-up actions
+    # Extract credentials from the data
+    account_id = data.get('accountId')
+    server = data.get('server')
+    password = data.get('password')
+
+    # Start MT5 bot automation
+  
+
+def start_mt5_bot(account_id, server, password):
+    """
+    Uses Appium to log into MT5 and starts the trading bot after successful login.
+    """
+    global bot_instance
+
+    logger.info("Starting MT5 Bot Automation...")
+
+    capabilities = {
+        'platformName': 'Android',
+        'deviceName': 'emulator-5554',  # Update with actual device name
+        'appPackage': 'com.metaquotes.metatrader5',
+        'appActivity': '.MainActivity',
+        'noReset': True
+    }
+
+    driver = webdriver.Remote('http://localhost:4723/wd/hub', capabilities)
+
+    try:
+        # Automate login in MT5
+        driver.find_element_by_id('com.metaquotes.metatrader5:id/accountId').send_keys(account_id)
+        driver.find_element_by_id('com.metaquotes.metatrader5:id/server').send_keys(server)
+        driver.find_element_by_id('com.metaquotes.metatrader5:id/password').send_keys(password)
+        driver.find_element_by_id('com.metaquotes.metatrader5:id/login_button').click()
+
+        # Wait for login to complete
+        time.sleep(5)
+
+        # Check if login was successful (you might need to check for UI elements)
+        if "Trade" in driver.page_source:  # Simple check to verify login success
+            logger.info("Logged in to MT5 successfully!")
+
+            # Start the trading bot
+            bot_instance = MT5SMCBot()
+            bot_instance.start_trading()  # This should trigger the bot’s trading function
+
+            return True
+        else:
+            logger.error("Login failed. Please check credentials.")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error during MT5 login: {e}")
+        return False
 # Create database tables
 with app.app_context():
     db.create_all()
