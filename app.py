@@ -445,7 +445,7 @@ def start_mt5_bot(account_id, server, password):
             logger.info("Logged in to MT5 successfully!")
 
                bot_instance = TradingBot()
-            bot_instance.start_trading()
+               bot_instance.start_trading()
             
             # This should trigger the bot’s trading function
 
